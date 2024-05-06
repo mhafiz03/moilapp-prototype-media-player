@@ -1,5 +1,4 @@
 from src.plugin_interface import PluginInterface
-from src.models.plugins_model import GetResourcesIcon
 from PyQt6.QtWidgets import QWidget, QMessageBox
 from PyQt6.QtCore import QTimer
 from .ui_main import Ui_Form
@@ -12,7 +11,7 @@ class Controller(QWidget):
         super().__init__()
         self.ui = Ui_Form()
         self.model = model
-        self.icon = GetResourcesIcon()
+        self.icon = self.model.src_icon
         self.ui.setupUi(self)
         self.connect_event()
         self.set_stylesheet()
@@ -41,7 +40,7 @@ class Controller(QWidget):
         self.ui.label.setScaledContents(True)
 
     def set_stylesheet(self):
-        self.ui.frame_video_controller.setStyleSheet(self.model.style_frame_main())
+        self.ui.frame_video_controller.setStyleSheet(self.model.get_stylesheet.frame_main_stylesheet())
         self.ui.btn_original_view.setIcon(self.icon.get_icon_fisheye_24px())
         self.ui.btn_center_view.setIcon(self.icon.get_icon_center())
         self.ui.btn_up_view.setIcon(self.icon.get_icon_up())
@@ -55,6 +54,13 @@ class Controller(QWidget):
         self.ui.btn_stop.setIcon(self.icon.get_icon_square())
         self.ui.btn_forward.setIcon(self.icon.get_icon_forward_video())
         self.ui.btn_change_source.setIcon(self.icon.get_icon_opened_folder())
+        self.ui.btn_play_pause.setStyleSheet(self.model.get_stylesheet.pushbutton_stylesheet())
+        self.ui.btn_rewind.setStyleSheet(self.model.get_stylesheet.pushbutton_stylesheet())
+        self.ui.btn_play_pause.setStyleSheet(self.model.get_stylesheet.pushbutton_stylesheet())
+        self.ui.btn_stop.setStyleSheet(self.model.get_stylesheet.pushbutton_stylesheet())
+        self.ui.btn_forward.setStyleSheet(self.model.get_stylesheet.pushbutton_stylesheet())
+        self.ui.btn_change_source.setStyleSheet(self.model.get_stylesheet.pushbutton_stylesheet())
+
 
     def connect_event(self):
         self.ui.label.mousePressEvent = self.label_mouse_press_event
@@ -170,7 +176,7 @@ class Controller(QWidget):
     def _handle_successful_media_selection(self, source_type, cam_type, source_media, parameter_name):
         self.create_moildev(parameter_name)
         try:
-            if source_type == "Streaming Camera":
+            if source_type == "Open Camera":
                 if cam_type in ["opencv_usb_cam", "opencv_ip_cam", "camera_url"]:
                     if os.name == 'nt':
                         if isinstance(source_media, int):
