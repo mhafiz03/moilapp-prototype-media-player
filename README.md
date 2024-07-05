@@ -33,7 +33,7 @@ ffmpeg -i input_video.mp4 \
        -i xmap_1.pgm -i ymap_1.pgm \
        -i xmap_2.pgm -i ymap_2.pgm \
        -i xmap_3.pgm -i ymap_3.pgm \
-       -i xmap_4.pgm -i xmap_4.pgm \
+       -i xmap_4.pgm -i ymap_4.pgm \
        -i xmap_5.pgm -i ymap_5.pgm \
        -i xmap_6.pgm -i ymap_6.pgm \
 -filter_complex "\
@@ -57,13 +57,14 @@ ffmpeg -i input_video.mp4 \
 ```
 
 ## For 8 anypoints, 1 panorama, and 1 original view
+_(One view is not correct because accidentally put only x map as both maps for that one view, i.e instead of xmap and ymap, I did xmap and xmap)_
 ![](assets/example_8_more_views.jpg)
 ```sh
 ffmpeg -i input_video.mp4 \
        -i xmap_1.pgm -i ymap_1.pgm \
        -i xmap_2.pgm -i ymap_2.pgm \
        -i xmap_3.pgm -i ymap_3.pgm \
-       -i xmap_4.pgm -i xmap_4.pgm \
+       -i xmap_4.pgm -i ymap_4.pgm \
        -i xmap_5.pgm -i ymap_5.pgm \
        -i xmap_6.pgm -i ymap_6.pgm \
        -i xmap_7.pgm -i ymap_7.pgm \
