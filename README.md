@@ -1,7 +1,7 @@
 # Notes
-Inspired by MAP_CACHE_ENABLED in [cjchng/mainmoil_6view](https://github.com/cjchng/mainmoil_6view) and [FFMPEG](https://trac.ffmpeg.org/wiki/Creating%20multiple%20outputs)'s performance.
+Inspired by `MAP_CACHE_ENABLED` in [cjchng/mainmoil_6view](https://github.com/cjchng/mainmoil_6view) and [FFMPEG](https://trac.ffmpeg.org/wiki/Creating%20multiple%20outputs)'s performance.
 
-This is a showcase of using FFMPEG's remap filter instead of OpenCV's remap function.
+This is a showcase of using FFMPEG's `remap filter` instead of OpenCV's `remap` function.
 
 # To make a PGM file:
 ```python
@@ -16,14 +16,19 @@ Image.fromarray(map_y.astype(np.int16)).save("map_y.pgm")
 
 # FFMPEG Examples
 Here are examples on using FFMPEG's remap filter, also looking for a description? Please refer to [FFMPEG documentation](https://trac.ffmpeg.org/wiki/RemapFilter):
-```bash
-# For image
+## For image
+```sh
 ffmpeg -i fisheye_image.jpg -i map_x.pgm -i map_y.pgm -lavfi remap output.png
+```
 
-# For video
+## For video
+```sh
 ffmpeg -i fisheye_image.mp4 -i map_x.pgm -i map_y.pgm -lavfi remap output.mp4
+```
 
-# For 6 views 
+## For 6 views
+![](assets/example_6_views.jpg)
+```sh
 ffmpeg -i input_video.mp4 \
        -i xmap_1.pgm -i ymap_1.pgm \
        -i xmap_2.pgm -i ymap_2.pgm \
@@ -49,8 +54,11 @@ ffmpeg -i input_video.mp4 \
        [v4s][v5s][v6s]hstack=inputs=3[row2]; \
        [row1][row2]vstack=inputs=2[out]" \
        -map "[out]" output_video.mp4
+```
 
-# For 8 anypoints, 1 panorama, and 1 original view
+## For 8 anypoints, 1 panorama, and 1 original view
+![](assets/example_8_more_views.jpg)
+```sh
 ffmpeg -i input_video.mp4 \
        -i xmap_1.pgm -i ymap_1.pgm \
        -i xmap_2.pgm -i ymap_2.pgm \
@@ -87,8 +95,11 @@ ffmpeg -i input_video.mp4 \
        [v5s][v6s][v7s][v8s]hstack=inputs=4[anyrow]; \
        [pano_c][anyrow][anygrid_orig]vstack=inputs=3[out]" \
        -map "[out]" output_video.mp4 
+```
 
-# For live streaming, note: -g is for GOP (Group Of Pictures), make it the same as FPS of source video
+## For live streaming
+**Note:** `-g` is for GOP (Group Of Pictures), make it the same as FPS of source video
+```sh
 ffmpeg -i input_video.mp4 \
        -i xmap_1.pgm -i ymap_1.pgm \
        -i xmap_2.pgm -i ymap_2.pgm \
@@ -115,8 +126,10 @@ ffmpeg -i input_video.mp4 \
        [row1][row2]vstack=inputs=2[out]" \
        -map "[out]" -y -c:v libx264 -g 10 -preset ultrafast -tune zerolatency \
        -hls_time 10 -f hls output_stream.m3u8
+```
 
-# For live streaming and output it to 6 different files
+## For live streaming and outputting it to 6 different files
+```sh
 ffmpeg -i input_video.mp4 \
        -i xmap_1.pgm -i ymap_1.pgm \
        -i xmap_2.pgm -i ymap_2.pgm \

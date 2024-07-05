@@ -292,9 +292,6 @@ class Controller(QWidget):
         self.stacked_widgets.updateStackedWidget()
         
 
-
-
-
 class PrototypeMediaPlayer(PluginInterface):
     def __init__(self):
         super().__init__()
