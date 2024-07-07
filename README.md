@@ -2,7 +2,7 @@
 
 https://github.com/mhafiz03/moilapp-prototype-media-player/assets/153695217/9dd46eb6-1f8a-4c13-abab-85957b9558ec
 
-# Notes
+# Description
 Inspired by `MAP_CACHE_ENABLED` in [cjchng/mainmoil_6view](https://github.com/cjchng/mainmoil_6view) and [FFMPEG](https://trac.ffmpeg.org/wiki/Creating%20multiple%20outputs)'s performance.
 
 This is a showcase of using FFMPEG's `remap filter` instead of OpenCV's `remap` function.
@@ -18,8 +18,25 @@ Image.fromarray(map_x.astype(np.int16)).save("map_x.pgm")
 Image.fromarray(map_y.astype(np.int16)).save("map_y.pgm")
 ```
 
+# Generate Multiple Views Grid With A Single Map
+
+This is wayyy **faster** than below and can go up to `60 fps` _(or stable at `30 fps`, on an `8 core` machine)_ so it can be used for **real time** video remap with **any arbitary number of maps**. _See [gen_maps_grid.py](gen_maps_grid.py)_
+
+_(It takes around 30 seconds to generate 360 map pairs on same machine mentioned before, but with real time encoding speed)_.
+
+## Examples For Grid On Single Map 
+### 4x8 Grid
+![](assets/example_4x8_views.jpg)
+
+### 8x8 Grid
+![](assets/example_8x8_views.jpg)
+
+### 15x24 Grid (all 360 degrees on beta)
+![](assets/example_15x24_views.jpg)
+
 # FFMPEG Examples
-Here are examples on using FFMPEG's remap filter, also looking for a description? Please refer to [FFMPEG documentation](https://trac.ffmpeg.org/wiki/RemapFilter):
+Here are examples on using FFMPEG's remap filter _(and stack, scale, map, split filters but I they're not needed anymore since the above)_, also looking for a description? Please refer to [FFMPEG documentation](https://trac.ffmpeg.org/wiki/RemapFilter):
+
 ## For image
 ```sh
 ffmpeg -i fisheye_image.jpg -i map_x.pgm -i map_y.pgm -lavfi remap output.png
