@@ -2,16 +2,39 @@ from src.plugin_interface import PluginInterface
 from PyQt6.QtWidgets import QWidget, QMessageBox
 from PyQt6.QtCore import QTimer
 from .ui_main import Ui_Form
+from src.models.plugins_model.resource_icon_and_pixmap import GetResourcesIcon
+from src.models.shared_model import Model
 import cv2
 import os
+import numpy as np
 
+from multiprocessing import Pool, cpu_count
+
+
+MOILDEV = None
+ALPHA = 40
+ZOOM = 3
+CELL_WIDTH = None
+
+def generate_map(beta_value):
+    map_X, map_Y = MOILDEV.maps_anypoint_mode1(ALPHA, beta_value, ZOOM)
+    
+    h, w = map_X.shape
+    scaling_factor = CELL_WIDTH / w
+    new_w = int(w * scaling_factor)
+    new_h = int(h * scaling_factor)
+    
+    x = cv2.resize(map_X, (new_w, new_h), interpolation=cv2.INTER_AREA)
+    y = cv2.resize(map_Y, (new_w, new_h), interpolation=cv2.INTER_AREA)
+    
+    return x, y
 
 class Controller(QWidget):
-    def __init__(self, model):
+    def __init__(self, model : Model):
         super().__init__()
         self.ui = Ui_Form()
         self.model = model
-        self.icon = self.model.src_icon
+        self.icon = GetResourcesIcon()
         self.ui.setupUi(self)
         self.connect_event()
         self.set_stylesheet()
@@ -39,14 +62,16 @@ class Controller(QWidget):
         self.ui.label.setPixmap(self.icon.get_pixmap_vlc())
         self.ui.label.setScaledContents(True)
 
+        self.beta_list = None
+        self.grid_cols = 0
+
     def set_stylesheet(self):
-        self.ui.frame_video_controller.setStyleSheet(self.model.get_stylesheet.frame_main_stylesheet())
+        self.ui.frame_video_controller.setStyleSheet(self.model.style_frame_main())
         self.ui.btn_original_view.setIcon(self.icon.get_icon_fisheye_24px())
-        self.ui.btn_center_view.setIcon(self.icon.get_icon_center())
-        self.ui.btn_up_view.setIcon(self.icon.get_icon_up())
-        self.ui.btn_down_view.setIcon(self.icon.get_icon_down())
-        self.ui.btn_left_view.setIcon(self.icon.get_icon_left())
-        self.ui.btn_right_view.setIcon(self.icon.get_icon_right())
+        self.ui.btn_2x3_view.setStyleSheet(self.model.style_pushbutton())
+        self.ui.btn_2x4_view.setStyleSheet(self.model.style_pushbutton())
+        self.ui.btn_3x5_view.setStyleSheet(self.model.style_pushbutton())
+        self.ui.btn_4x6_view.setStyleSheet(self.model.style_pushbutton())
         self.ui.btn_zoom_in.setIcon(self.icon.get_icon_zoom_in())
         self.ui.btn_zoom_out.setIcon(self.icon.get_icon_zoom_out())
         self.ui.btn_play_pause.setIcon(self.icon.get_icon_play_video())
@@ -54,12 +79,12 @@ class Controller(QWidget):
         self.ui.btn_stop.setIcon(self.icon.get_icon_square())
         self.ui.btn_forward.setIcon(self.icon.get_icon_forward_video())
         self.ui.btn_change_source.setIcon(self.icon.get_icon_opened_folder())
-        self.ui.btn_play_pause.setStyleSheet(self.model.get_stylesheet.pushbutton_stylesheet())
-        self.ui.btn_rewind.setStyleSheet(self.model.get_stylesheet.pushbutton_stylesheet())
-        self.ui.btn_play_pause.setStyleSheet(self.model.get_stylesheet.pushbutton_stylesheet())
-        self.ui.btn_stop.setStyleSheet(self.model.get_stylesheet.pushbutton_stylesheet())
-        self.ui.btn_forward.setStyleSheet(self.model.get_stylesheet.pushbutton_stylesheet())
-        self.ui.btn_change_source.setStyleSheet(self.model.get_stylesheet.pushbutton_stylesheet())
+        self.ui.btn_play_pause.setStyleSheet(self.model.style_pushbutton())
+        self.ui.btn_rewind.setStyleSheet(self.model.style_pushbutton())
+        self.ui.btn_play_pause.setStyleSheet(self.model.style_pushbutton_play_pause_video())
+        self.ui.btn_stop.setStyleSheet(self.model.style_pushbutton())
+        self.ui.btn_forward.setStyleSheet(self.model.style_pushbutton())
+        self.ui.btn_change_source.setStyleSheet(self.model.style_pushbutton())
 
 
     def connect_event(self):
@@ -67,11 +92,10 @@ class Controller(QWidget):
         self.ui.btn_zoom_in.clicked.connect(lambda: self.zoom_image("zoom_in"))
         self.ui.btn_zoom_out.clicked.connect(lambda: self.zoom_image("zoom_out"))
         self.ui.btn_original_view.clicked.connect(lambda: self.onclick_btn_state_view("fisheye"))
-        self.ui.btn_center_view.clicked.connect(lambda: self.onclick_btn_state_view("center"))
-        self.ui.btn_up_view.clicked.connect(lambda: self.onclick_btn_state_view("up"))
-        self.ui.btn_down_view.clicked.connect(lambda: self.onclick_btn_state_view("down"))
-        self.ui.btn_left_view.clicked.connect(lambda: self.onclick_btn_state_view("left"))
-        self.ui.btn_right_view.clicked.connect(lambda: self.onclick_btn_state_view("right"))
+        self.ui.btn_2x3_view.clicked.connect(lambda: self.onclick_btn_state_view('2x3'))
+        self.ui.btn_2x4_view.clicked.connect(lambda: self.onclick_btn_state_view('2x4'))
+        self.ui.btn_3x5_view.clicked.connect(lambda: self.onclick_btn_state_view('3x5'))
+        self.ui.btn_4x6_view.clicked.connect(lambda: self.onclick_btn_state_view('4x6'))
         self.ui.btn_change_source.clicked.connect(self.onclick_change_source)
 
         self.ui.btn_play_pause.clicked.connect(self.onclick_play_pause_video)
@@ -98,25 +122,17 @@ class Controller(QWidget):
     def onclick_btn_state_view(self, state):
         if self.image is not None:
             self.state = state
-            zoom = 3
             if state != "fisheye":
-                if state == "up":
-                    alpha = 75
-                    beta = 0
-                elif state == "down":
-                    alpha = -75
-                    beta = 0
-                elif state == "left":
-                    alpha = 0
-                    beta = -75
-                elif state == "right":
-                    alpha = 0
-                    beta = 75
-                else:
-                    alpha = 0
-                    beta = 0
+                if state == "2x3":
+                    self.set_grid_values(2, 3)
+                elif state == "2x4":
+                    self.set_grid_values(2, 4)
+                elif state == "3x5":
+                    self.set_grid_values(3, 5)
+                elif state == "4x6":
+                    self.set_grid_values(4, 6)
+                self.create_grid()
 
-                self.maps_x, self.maps_y = self.moildev.maps_anypoint_mode2(alpha, beta, 0, zoom)
             self.show_image_result()
 
     def label_mouse_press_event(self, event):
@@ -188,7 +204,7 @@ class Controller(QWidget):
 
                     self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.moildev.image_width)
                     self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.moildev.image_height)
-                    self.cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter.fourcc('M', 'J', 'P', 'G'))
+                    # self.cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter.fourcc('M', 'J', 'P', 'G'))
                     self.fps = 20
                     self.video = False
                     self.next_frame_signal()
@@ -229,7 +245,9 @@ class Controller(QWidget):
             print("some error in media_source")
 
     def create_moildev(self, parameter_name):
+        global MOILDEV
         self.moildev = self.model.connect_to_moildev(parameter_name=parameter_name)
+        MOILDEV = self.moildev
 
     def next_frame_signal(self):
         if self.cap is not None:
@@ -330,6 +348,36 @@ class Controller(QWidget):
             else:
                 image = cv2.remap(self.image.copy(), self.maps_x, self.maps_y, interpolation=cv2.INTER_AREA)
                 self.model.show_image_to_label(self.ui.label, image, self.width_image)
+
+    def set_grid_values(self, grid_rows, grid_cols):
+        global CELL_WIDTH
+        CELL_WIDTH = self.width_image / grid_cols
+        total_maps = grid_rows * grid_cols
+        beta_increment = 360 / total_maps
+        
+        self.grid_cols = grid_cols
+        self.beta_list = [i * beta_increment for i in range(total_maps)]
+        self.total_maps = total_maps
+
+    def create_grid(self):
+        if self.moildev is None:
+            return
+
+        with Pool(processes=cpu_count()) as pool:
+            results = pool.map(generate_map, self.beta_list)
+
+        maps_x_list, maps_y_list = zip(*results)
+
+        h_stacks_x = []
+        h_stacks_y = []
+
+        for i in range(0, self.total_maps, self.grid_cols):
+            h_stacks_x.append(np.hstack(maps_x_list[i:i + self.grid_cols]))
+            h_stacks_y.append(np.hstack(maps_y_list[i:i + self.grid_cols]))
+
+        self.maps_x = np.vstack(h_stacks_x)
+        self.maps_y = np.vstack(h_stacks_y)
+
 
     @classmethod
     def show_message(cls, title, message, timer=5000):
